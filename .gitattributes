@@ -1,0 +1,2 @@
+# Kabuk betikleri Linux'ta LF ister; Windows checkout'unda bile LF kalsın
+*.sh text eol=lf

@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Altın Paneli</title>
+<style>
+  /* ---- Palet (MIMARI.md sözleşmesi) ---- */
+  :root {
+    color-scheme: light dark;
+    --yuzey: #fcfcfb; --kart: #ffffff;
+    --metin: #0b0b0b; --ikincil: #52514e; --soluk: #898781; --izgara: #e1e0d9;
+    --seri1: #2a78d6; --seri2: #eb6834; --seri3: #1baf7a;
+    --iyi: #0ca30c; --kotu: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --yuzey: #1a1a19; --kart: #232322;
+      --metin: #ffffff; --ikincil: #c3c2b7; --soluk: #8b8a80; --izgara: #34332f;
+      --seri1: #3987e5; --seri2: #d95926; --seri3: #199e70;
+      --iyi: #0ca30c; --kotu: #d03b3b;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--yuzey); color: var(--metin);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .kapsayici { max-width: 1100px; margin: 0 auto; padding: 20px 16px 8px; }
+  h1 { font-size: 1.05rem; margin: 0; font-weight: 600; color: var(--ikincil); }
+  h2 { font-size: 1.05rem; margin: 0 0 12px; font-weight: 650; }
+  h3 { font-size: 0.9rem; margin: 14px 0 8px; font-weight: 600; color: var(--ikincil); }
+  section { margin: 26px 0; }
+  .kart {
+    background: var(--kart); border: 1px solid var(--izgara);
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .soluk-metin { color: var(--soluk); }
+  .ikincil-metin { color: var(--ikincil); }
+  .kucuk { font-size: 0.82rem; }
+  .not { color: var(--soluk); font-size: 0.8rem; margin: 8px 2px 0; }
+  .iyi { color: var(--iyi); }
+  .kotu { color: var(--kotu); }
+  [hidden] { display: none !important; }
+
+  /* ---- 1. Üst şerit ---- */
+  .ust-serit {
+    display: flex; flex-wrap: wrap; gap: 18px 32px; align-items: flex-end;
+    border-bottom: 1px solid var(--izgara); padding-bottom: 18px;
+  }
+  .buyuk-fiyat { font-size: 2.6rem; font-weight: 650; line-height: 1.15; letter-spacing: -0.5px; }
+  .degisim { font-size: 0.95rem; margin-top: 2px; }
+  .ust-sag { margin-left: auto; text-align: right; font-size: 0.82rem; color: var(--ikincil); }
+  .canli-kap { width: 240px; }
+  .canli-grafik { position: relative; height: 56px; }
+
+  /* ---- 2. Yön kartları ---- */
+  .kartlar { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+  .yon-baslik { display: flex; justify-content: space-between; align-items: baseline; }
+  .yon-olasilik { font-size: 2rem; font-weight: 650; margin: 6px 0 0; }
+  .olasilik-cubugu {
+    position: relative; height: 6px; border-radius: 3px;
+    background: var(--izgara); margin: 10px 0 12px; overflow: hidden;
+  }
+  .olasilik-cubugu .dolgu { position: absolute; inset: 0 auto 0 0; background: var(--seri1); border-radius: 3px; }
+  .olasilik-cubugu .orta { position: absolute; top: -2px; bottom: -2px; left: 50%; width: 2px; background: var(--soluk); }
+  .durustluk { font-size: 0.8rem; color: var(--ikincil); border-top: 1px solid var(--izgara); padding-top: 8px; margin-top: 10px; }
+  .durum-satiri { font-size: 0.8rem; margin-top: 6px; }
+
+  /* ---- Grafik kapları (x ekseni bandı dahil yükseklik) ---- */
+  .grafik-kap { position: relative; height: 320px; }
+  .grafik-kap.kisa { position: relative; height: 220px; }
+
+  /* ---- Düğme satırları ---- */
+  .dugme-satiri { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .dugme-satiri button {
+    font: inherit; font-size: 0.82rem; color: var(--ikincil);
+    background: var(--kart); border: 1px solid var(--izgara);
+    border-radius: 999px; padding: 4px 14px; cursor: pointer;
+  }
+  .dugme-satiri button:hover { border-color: var(--soluk); }
+  .dugme-satiri button.aktif { color: var(--seri1); border-color: var(--seri1); font-weight: 600; }
+
+  /* ---- Senaryo lejantı (özel HTML lejant) ---- */
+  .lejant { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 10px; font-size: 0.8rem; color: var(--ikincil); }
+  .lejant .oge { display: inline-flex; align-items: center; gap: 7px; }
+  .lejant .cizgi { width: 18px; height: 0; border-top: 2px solid var(--seri1); }
+  .lejant .bant { width: 18px; height: 12px; border-radius: 2px; background: var(--seri1); }
+  .lejant .bant.b10 { opacity: 0.12; }
+  .lejant .bant.b25 { opacity: 0.24; }
+
+  /* ---- 4. Kıyas tablosu ---- */
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--izgara); font-variant-numeric: tabular-nums; }
+  thead th { color: var(--ikincil); font-size: 0.8rem; font-weight: 600; }
+  tbody tr:last-child td { border-bottom: none; }
+  td .deger { font-weight: 650; font-size: 1rem; }
+  td .bant-metni { color: var(--soluk); font-size: 0.78rem; margin-top: 2px; }
+
+  /* ---- 7. Dipnot ---- */
+  footer {
+    border-top: 1px solid var(--izgara); margin-top: 34px; padding: 16px 2px 26px;
+    color: var(--ikincil); font-size: 0.82rem;
+  }
+  footer p { margin: 6px 0; }
+</style>
+</head>
+<body>
+<div class="kapsayici">
+
+  <!-- 1. Üst şerit: güncel fiyat + günlük değişim + kaynak/tarih -->
+  <header class="ust-serit">
+    <div>
+      <h1>Gram Altın</h1>
+      <div class="buyuk-fiyat" id="guncelFiyat">—</div>
+      <div class="degisim" id="gunlukDegisim"></div>
+      <div class="kucuk soluk-metin" id="alisSatis"></div>
+    </div>
+    <div class="canli-kap" id="canliKap" hidden>
+      <div class="canli-grafik"><canvas id="grafikCanli" aria-label="Son 24 saatlik canlı gram altın çizgisi"></canvas></div>
+      <div class="kucuk soluk-metin" id="canliEtiket"></div>
+    </div>
+    <div class="ust-sag">
+      <div id="kaynakSatiri">Veri bekleniyor…</div>
+      <div id="veriDurumu"></div>
+    </div>
+  </header>
+
+  <!-- 1b. Karar görünümü: bugün alırsam ne zaman kâra geçerim? -->
+  <section id="bolum-karar">
+    <h2>Bugün alırsam? — kâra geçiş görünümü</h2>
+    <div class="kart">
+      <p id="kararOzet">Senaryo verisi bekleniyor…</p>
+      <p id="kararMevduat"></p>
+      <div class="grafik-kap kisa"><canvas id="grafikKarar" aria-label="Aylara göre makas sonrası kârda olma olasılığı"></canvas></div>
+      <p class="not" id="kararNot">Eğri, bugün alınan gramın alış-satış makası düşüldükten sonra o ayda kârda olma
+      olasılığıdır — 2.000 senaryo yolundan SAYILIR, model iddiası değildir; geçmiş 21 yılın istatistiksel karakterinin
+      süreceği varsayımına dayanır. Başlangıç fiyatı son günlük kapanıştır. Yatırım tavsiyesi değildir.</p>
+    </div>
+  </section>
+
+  <!-- 2. Yön kartları (1/3/6 ay) + dürüstlük satırları -->
+  <section id="bolum-yon">
+    <h2>Yön tahminleri</h2>
+    <div class="kartlar" id="yonKartlari"></div>
+    <p class="not" id="yonNot" hidden>Tahmin dosyası henüz üretilmedi; günlük güncelleme sonrası burada 1/3/6 aylık yön olasılıkları görünecek.</p>
+  </section>
+
+  <!-- 2b. Kısa vade yön kartları (1 gün / 1 hafta) -->
+  <section id="bolum-kisa-vade">
+    <h2>Kısa vade yön tahminleri (deneysel)</h2>
+    <div class="kartlar" id="kisaVadeKartlari"></div>
+    <p class="not">Günlük/haftalık yön büyük ölçüde piyasa gürültüsüdür; bu kartlar sinyal üretmek için değil,
+    kısa vadede tutarlılığın ÖLÇÜLEBİLMESİ için vardır. Testler örtüşmez (etkin örneklem = test sayısı),
+    bu yüzden buradaki isabet-taban kıyası istatistiksel olarak aylık kartlardan daha güvenilirdir.</p>
+    <p class="not" id="kisaVadeNot" hidden>Kısa vade tahmin dosyası henüz üretilmedi; ilk güncelleme sonrası burada 1 günlük ve 1 haftalık yön olasılıkları görünecek.</p>
+  </section>
+
+  <!-- 2c. Yaklaşan planlı olaylar -->
+  <section id="bolum-takvim">
+    <h2>Yaklaşan planlı olaylar</h2>
+    <div class="kart">
+      <ul id="takvimListe"></ul>
+      <p class="not" id="takvimBos" hidden>Önümüzdeki 60 gün içinde kayıtlı planlı olay yok.</p>
+      <p class="not" id="takvimUyari" hidden>⚠ Takvimde gelecek tarihli olay kalmadı — takvim.json dosyasını yeni yılın Fed/TCMB tarihleriyle güncelleyin.</p>
+      <p class="not">Kaynak: takvim.json (elle güncellenir, API gerekmez). Faiz kararı günlerinde oynaklık yükselir;
+      bu liste model girdisi değil, karar bağlamıdır.</p>
+    </div>
+  </section>
+
+  <!-- 2d. Model sağlığı -->
+  <section id="bolum-saglik">
+    <h2>Model sağlığı</h2>
+    <div class="kart">
+      <p id="saglikPsi">Sağlık raporu bekleniyor…</p>
+      <p id="saglikCanli"></p>
+      <p class="not">PSI (veri kayması): özniteliklerin son ~3 aylık dağılımı geçmişle kıyaslanır ve
+      bugünkü kayma, geçmişteki tüm 3 aylık pencerelerin kayma dağılımındaki YÜZDELİĞİYLE değerlendirilir
+      (yüzdelik &lt;90 🟢 stabil · 90–97,5 🟡 izleniyor · &gt;97,5 🔴 alarm — bugünkü piyasa rejimi, modelin
+      geçmişte hemen hiç görmediği bir bölgede; tahminlere temkinli yaklaşın). Canlı uyum: sicildeki gerçek
+      isabet, walk-forward beklentisinin %95 güven alt sınırıyla karşılaştırılır (en az 20 sonuçlanmış tahmin gerekir).</p>
+    </div>
+  </section>
+
+  <!-- 3. Senaryo yelpazesi -->
+  <section id="bolum-senaryo">
+    <h2>1–2 yıl senaryo yelpazesi (gram altın, TL)</h2>
+    <div class="kart" id="senaryoIcerik">
+      <div class="grafik-kap"><canvas id="grafikSenaryo" aria-label="12 ve 24 ay gram altın senaryo yelpazesi"></canvas></div>
+      <div class="lejant">
+        <span class="oge"><span class="cizgi"></span>Medyan (p50)</span>
+        <span class="oge"><span class="bant b25"></span>p25–p75 bandı</span>
+        <span class="oge"><span class="bant b10"></span>p10–p90 bandı</span>
+      </div>
+      <p class="not">Yelpaze, geçmiş aylık getirilerin eşli blok bootstrap örneklemesinden gelir; kesinlik değil belirsizlik gösterir.</p>
+    </div>
+    <p class="not" id="senaryoNot" hidden>Senaryo dosyası henüz üretilmedi.</p>
+  </section>
+
+  <!-- 4. Kıyas tablosu -->
+  <section id="bolum-kiyas">
+    <h2>Kıyas: altın · dolar · mevduat</h2>
+    <div class="kart">
+      <table id="kiyasTablo" aria-label="12 ve 24 ay getiri kıyası">
+        <thead><tr id="kiyasBaslik"></tr></thead>
+        <tbody id="kiyasGovde"></tbody>
+      </table>
+      <p class="not">Altın ve dolar satırları senaryo medyanıdır; parantezdeki aralık p10–p90 bandıdır.
+      Mevduat getirisi basitleştirilmiş bileşik hesaptır; stopaj ve vergi dahil değildir.</p>
+    </div>
+    <p class="not" id="kiyasNot" hidden>Kıyas için senaryo dosyası bekleniyor.</p>
+  </section>
+
+  <!-- 5. İsabet geçmişi -->
+  <section id="bolum-isabet">
+    <h2>Modelin isabet geçmişi (12 aylık kayan isabet)</h2>
+    <div class="kart">
+      <div class="dugme-satiri" id="ufukDugmeleri" role="group" aria-label="Ufuk seçimi">
+        <button type="button" data-ufuk="1ay" class="aktif">1 ay</button>
+        <button type="button" data-ufuk="3ay">3 ay</button>
+        <button type="button" data-ufuk="6ay">6 ay</button>
+      </div>
+      <div class="grafik-kap kisa"><canvas id="grafikIsabet" aria-label="Modelin kayan isabet oranı ve taban çizgisi"></canvas></div>
+      <p class="not">Tüm noktalar walk-forward (ileriye dönük) testtir; eğitim-içi skor gösterilmez. Taban, penceredeki çoğunluk sınıfının oranıdır.</p>
+    </div>
+    <p class="not" id="isabetNot" hidden>Metrik dosyası henüz üretilmedi.</p>
+  </section>
+
+  <!-- 5a. Kalibrasyon -->
+  <section id="bolum-kalibrasyon">
+    <h2>Kalibrasyon — olasılıklar ne kadar güvenilir?</h2>
+    <div class="kart">
+      <div class="dugme-satiri" id="kalibDugmeleri" role="group" aria-label="Kalibrasyon ufuk seçimi">
+        <button type="button" data-kufuk="1g" class="aktif">1 gün</button>
+        <button type="button" data-kufuk="1h">1 hafta</button>
+        <button type="button" data-kufuk="1ay">1 ay</button>
+        <button type="button" data-kufuk="3ay">3 ay</button>
+        <button type="button" data-kufuk="6ay">6 ay</button>
+      </div>
+      <div class="grafik-kap kisa"><canvas id="grafikKalibrasyon" aria-label="Güvenilirlik diyagramı: söylenen olasılık ve gerçekleşme oranı"></canvas></div>
+      <p class="not">Her nokta bir walk-forward kovasıdır: yatay eksen modelin söylediği olasılık,
+      dikey eksen o kovada fiilen gerçekleşen yukarı oranı. Kesikli köşegene yakın nokta = kalibre model
+      ("%60" dediğinde gerçekten ~%60 çıkıyor). Köşegenden sapan noktalar o olasılık aralığına güvenilmeyeceğini gösterir.</p>
+    </div>
+    <p class="not" id="kalibrasyonNot" hidden>Bu ufukta kalibrasyon için yeterli walk-forward kaydı yok.</p>
+  </section>
+
+  <!-- 5b. Canlı tahmin sicili -->
+  <section id="bolum-sicil">
+    <h2>Canlı tahmin sicili</h2>
+    <div class="kart">
+      <p class="not" id="sicilOzet"></p>
+      <div style="overflow-x:auto">
+        <table id="sicilTablo" aria-label="Sistemin canlıda verdiği tahminlerin kaydı">
+          <thead><tr><th>Veri tarihi</th><th>Ufuk</th><th>Tahmin</th><th>Durum</th></tr></thead>
+          <tbody id="sicilGovde"></tbody>
+        </table>
+      </div>
+      <p class="not" id="sicilBos" hidden>Henüz kayıt yok; her gecelik eğitim buraya bir satır düşer.</p>
+      <p class="not">Yukarıdaki isabet geçmişi geçmişin simülasyonudur; bu tablo ise sistemin GERÇEK zamanda
+      verdiği tahminlerin kalıcı sicilidir. Tutarlılığın en dürüst ölçüsü, zamanla burada birikir.</p>
+    </div>
+  </section>
+
+  <!-- 6. Fiyat grafiği -->
+  <section id="bolum-fiyat">
+    <h2>Fiyat geçmişi (ay sonu kapanışları)</h2>
+    <div class="kart">
+      <div class="dugme-satiri" id="aralikDugmeleri" role="group" aria-label="Aralık seçimi">
+        <button type="button" data-aralik="1y" class="aktif">1 yıl</button>
+        <button type="button" data-aralik="5y">5 yıl</button>
+        <button type="button" data-aralik="max">Tümü</button>
+      </div>
+      <h3>Gram altın (TL)</h3>
+      <div class="grafik-kap kisa"><canvas id="grafikGram" aria-label="Gram altın TL aylık kapanış grafiği"></canvas></div>
+      <h3>Dolar kuru (USD/TL)</h3>
+      <div class="grafik-kap kisa"><canvas id="grafikKur" aria-label="Dolar kuru aylık kapanış grafiği"></canvas></div>
+      <p class="not">Gram altın ve kur, ölçekleri farklı olduğu için ayrı grafiklerde gösterilir; iki ölçekli tek grafik yanıltıcı olurdu.</p>
+    </div>
+    <p class="not" id="fiyatNot" hidden>Fiyat verisi henüz indirilmedi.</p>
+  </section>
+
+  <!-- 7. Sabit dipnot -->
+  <footer>
+    <p>Bu panel kişisel karar destek aracıdır; yatırım tavsiyesi değildir. Modelin isabeti sınırlıdır, metrikleri yukarıda şeffaftır.</p>
+    <p>Haftalık ufuk bilinçli olarak yok: günlük veriyle haftalık yön tahmini istatistiksel olarak gürültüden ayırt edilemiyor.</p>
+  </footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+"use strict";
+
+/* ---------------- durum ---------------- */
+const DURUM = { ozet: null, canli: null, isabet: null, fiyat: null, sicil: null,
+                kalib: null, aralik: "1y", ufuk: "1ay", kalibUfuk: "1g" };
+const GRAFIK = { senaryo: null, isabet: null, gram: null, kur: null, canli: null };
+const byId = (kimlik) => document.getElementById(kimlik);
+
+/* ---------------- biçimleyiciler (Türkçe) ---------------- */
+function sayi(deger, ondalik) {
+  if (deger === null || deger === undefined || Number.isNaN(Number(deger))) return "—";
+  const basamak = (ondalik === undefined) ? 2 : ondalik;
+  return Number(deger).toLocaleString("tr-TR", { minimumFractionDigits: basamak, maximumFractionDigits: basamak });
+}
+/* oran (0.12) -> %12,0 ; negatifse -%5,0 */
+function yuzdeOran(deger, ondalik) {
+  if (deger === null || deger === undefined || Number.isNaN(Number(deger))) return "—";
+  const isaret = deger < 0 ? "-" : "";
+  return isaret + "%" + sayi(Math.abs(deger) * 100, ondalik === undefined ? 1 : ondalik);
+}
+/* zaten yüzde birimli değişim (+/- işaretli) */
+function yuzdeDegisim(deger, ondalik) {
+  if (deger === null || deger === undefined || Number.isNaN(Number(deger))) return "—";
+  const isaret = deger < 0 ? "-" : "+";
+  return isaret + "%" + sayi(Math.abs(deger), ondalik === undefined ? 2 : ondalik);
+}
+const AYLAR = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+function tarihKisa(iso) { /* "2026-08-31" -> "Ağu 2026" */
+  if (!iso) return "";
+  const parca = String(iso).slice(0, 10).split("-");
+  return AYLAR[Number(parca[1]) - 1] + " " + parca[0];
+}
+function tarihNokta(iso) { /* -> "31.08.2026" */
+  if (!iso) return "—";
+  const parca = String(iso).slice(0, 10).split("-");
+  return parca[2] + "." + parca[1] + "." + parca[0];
+}
+function zamanKisa(ts) { /* "2026-09-04T14:03:05" -> "04.09.2026 14:03" */
+  if (!ts) return "—";
+  const metin = String(ts);
+  return tarihNokta(metin) + (metin.length >= 16 ? " " + metin.slice(11, 16) : "");
+}
+function ayEkle(iso, kacAy) {
+  const tarih = new Date(String(iso).slice(0, 10) + "T00:00:00");
+  tarih.setMonth(tarih.getMonth() + kacAy);
+  return AYLAR[tarih.getMonth()] + " " + tarih.getFullYear();
+}
+
+/* ---------------- palet ---------------- */
+function palet() {
+  const stil = getComputedStyle(document.documentElement);
+  const al = (ad) => stil.getPropertyValue(ad).trim();
+  return {
+    yuzey: al("--yuzey"), kart: al("--kart"), metin: al("--metin"),
+    ikincil: al("--ikincil"), soluk: al("--soluk"), izgara: al("--izgara"),
+    seri1: al("--seri1"), seri2: al("--seri2"), seri3: al("--seri3"),
+    iyi: al("--iyi"), kotu: al("--kotu")
+  };
+}
+function seffaf(hex, oran) {
+  const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+  return "rgba(" + r + "," + g + "," + b + "," + oran + ")";
+}
+
+/* ---------------- ortak grafik ayarları ---------------- */
+function ipucuAyar(p, geriCagrilar) {
+  return {
+    backgroundColor: p.kart, titleColor: p.metin, bodyColor: p.metin,
+    borderColor: p.izgara, borderWidth: 1, padding: 10,
+    usePointStyle: true, boxWidth: 14, boxHeight: 2, boxPadding: 4,
+    callbacks: geriCagrilar || {}
+  };
+}
+function ortakSecenekler(p, yBicimleyici) {
+  return {
+    responsive: true, maintainAspectRatio: false, animation: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: { legend: { display: false } },
+    scales: {
+      x: {
+        grid: { display: false }, border: { color: p.izgara },
+        ticks: { color: p.ikincil, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }
+      },
+      y: {
+        grid: { color: p.izgara, lineWidth: 1 }, border: { display: false },
+        ticks: { color: p.ikincil, maxTicksLimit: 6, callback: yBicimleyici || ((v) => sayi(v, 0)) }
+      }
+    }
+  };
+}
+function cizVeyaYenile(anahtar, tuvalKimligi, yapilandirma) {
+  if (typeof Chart === "undefined") return; /* CDN yüklenemediyse sessizce geç */
+  if (GRAFIK[anahtar]) GRAFIK[anahtar].destroy();
+  GRAFIK[anahtar] = new Chart(byId(tuvalKimligi), yapilandirma);
+}
+
+/* ---------------- 1. üst şerit ---------------- */
+function ustSeritGuncelle() {
+  const ozet = DURUM.ozet;
+  if (!ozet) return;
+  const canli = ozet.canli;
+  const durum = ozet.veri_durumu || {};
+  const degisimKutusu = byId("gunlukDegisim");
+  degisimKutusu.textContent = "";
+  if (!canli) {
+    byId("guncelFiyat").textContent = "—";
+    byId("kaynakSatiri").textContent = "Fiyat verisi yok (veri/indir henüz çalışmadı).";
+    byId("alisSatis").textContent = "";
+    return;
+  }
+  byId("guncelFiyat").textContent = sayi(canli.fiyat, 2) + " TL";
+  if (canli.gunluk_degisim_yuzde !== null && canli.gunluk_degisim_yuzde !== undefined) {
+    const yukari = canli.gunluk_degisim_yuzde >= 0;
+    const rozet = document.createElement("span");
+    rozet.className = yukari ? "iyi" : "kotu";
+    rozet.textContent = (yukari ? "▲ " : "▼ ") + yuzdeDegisim(canli.gunluk_degisim_yuzde);
+    degisimKutusu.appendChild(rozet);
+    const aciklama = document.createElement("span");
+    aciklama.className = "soluk-metin kucuk";
+    aciklama.textContent = " son kapanışa göre (" + tarihNokta(canli.onceki_kapanis_tarih) + ")";
+    degisimKutusu.appendChild(aciklama);
+  }
+  byId("alisSatis").textContent = (canli.kaynak === "canli" && canli.alis !== null)
+    ? "Alış " + sayi(canli.alis, 2) + " · Satış " + sayi(canli.satis, 2)
+    : "";
+  byId("kaynakSatiri").textContent = (canli.kaynak === "canli")
+    ? "Canlı veri (Harem Altın) · " + zamanKisa(canli.ts)
+    : "Son kapanış · " + tarihNokta(canli.ts);
+  byId("veriDurumu").textContent =
+    "Veri: " + tarihNokta(durum.son_veri_tarihi) +
+    " · Model eğitimi: " + zamanKisa(durum.son_egitim_zamani);
+}
+
+/* canlı 24 saat kıvılcım çizgisi */
+function canliCiz() {
+  const seri = DURUM.canli;
+  const kap = byId("canliKap");
+  if (!seri || !seri.ts || seri.ts.length === 0) {
+    kap.hidden = true;
+    if (GRAFIK.canli) { GRAFIK.canli.destroy(); GRAFIK.canli = null; }
+    return;
+  }
+  kap.hidden = false;
+  byId("canliEtiket").textContent = "Canlı satış, son 24 saat (" + sayi(seri.ts.length, 0) + " kayıt)";
+  const p = palet();
+  cizVeyaYenile("canli", "grafikCanli", {
+    type: "line",
+    data: {
+      labels: seri.ts,
+      datasets: [{
+        data: seri.satis, borderColor: p.seri3, borderWidth: 2,
+        pointRadius: 0, pointHitRadius: 12, tension: 0.2, fill: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: ipucuAyar(p, {
+          title: (ogeler) => zamanKisa(ogeler[0].label),
+          label: (oge) => "Satış: " + sayi(oge.parsed.y, 2) + " TL"
+        })
+      },
+      scales: { x: { display: false }, y: { display: false } }
+    }
+  });
+}
+
+/* ---------------- 2. yön kartları ---------------- */
+const UFUK_ETIKETLERI = { "1ay": "1 Ay", "3ay": "3 Ay", "6ay": "6 Ay", "1g": "1 Gün", "1h": "1 Hafta" };
+function yonKartiOlustur(ufuk, bilgi) {
+    const kart = document.createElement("div");
+    kart.className = "kart";
+
+    const baslik = document.createElement("div");
+    baslik.className = "yon-baslik";
+    const ad = document.createElement("strong");
+    ad.textContent = UFUK_ETIKETLERI[ufuk] || ufuk;
+    const model = document.createElement("span");
+    model.className = "kucuk soluk-metin";
+    model.textContent = "model: " + (bilgi.secilen_model || "—");
+    baslik.appendChild(ad); baslik.appendChild(model);
+    kart.appendChild(baslik);
+
+    const olasilik = document.createElement("div");
+    olasilik.className = "yon-olasilik";
+    olasilik.textContent = yuzdeOran(bilgi.yukari_olasilik, 0);
+    kart.appendChild(olasilik);
+    const etiket = document.createElement("div");
+    etiket.className = "kucuk ikincil-metin";
+    const p = Number(bilgi.yukari_olasilik);
+    /* kararsızlık bandı (%45-55): fiilen yazı-tura — sinyal yok (sözleşme) */
+    etiket.textContent = (p >= 0.45 && p <= 0.55)
+      ? "KARARSIZ bölge (%45–55) — sinyal yok"
+      : "yukarı yönlü olasılık";
+    kart.appendChild(etiket);
+
+    /* olasılık çubuğu: %50 orta çizgili tek renkli dolgu */
+    const cubuk = document.createElement("div");
+    cubuk.className = "olasilik-cubugu";
+    const dolgu = document.createElement("div");
+    dolgu.className = "dolgu";
+    dolgu.style.width = Math.max(0, Math.min(100, (bilgi.yukari_olasilik || 0) * 100)) + "%";
+    const orta = document.createElement("div");
+    orta.className = "orta";
+    cubuk.appendChild(dolgu); cubuk.appendChild(orta);
+    kart.appendChild(cubuk);
+
+    /* dürüstlük satırı */
+    const durustluk = document.createElement("div");
+    durustluk.className = "durustluk";
+    durustluk.textContent =
+      "Son " + sayi(bilgi.n_test, 0) + " testte isabet " + yuzdeOran(bilgi.isabet, 0) +
+      ", taban " + yuzdeOran(bilgi.taban_isabet, 0) +
+      " · Brier " + sayi(bilgi.brier, 3) + " (taban " + sayi(bilgi.taban_brier, 3) + ")" +
+      (bilgi.etkin_n ? " · etkin örneklem ≈" + sayi(bilgi.etkin_n, 0) : "") +
+      (bilgi.kararli_n
+        ? " · kararlı " + sayi(bilgi.kararli_n, 0) + " tahminde isabet " +
+          yuzdeOran(bilgi.kararli_isabet, 0) + " (taban " + yuzdeOran(bilgi.kararli_taban, 0) + ")"
+        : "");
+    kart.appendChild(durustluk);
+
+    const durumSatiri = document.createElement("div");
+    durumSatiri.className = "durum-satiri";
+    if (bilgi.isabet !== null && bilgi.taban_isabet !== null && bilgi.isabet > bilgi.taban_isabet) {
+      durumSatiri.className += " iyi";
+      durumSatiri.textContent = "✓ İsabet taban çizgisinin üzerinde";
+    } else {
+      durumSatiri.className += " kotu";
+      durumSatiri.textContent = "⚠ Model bu ufukta saf tabanı geçemiyor — bu tahmine güvenmeyin";
+    }
+    kart.appendChild(durumSatiri);
+    return kart;
+}
+
+function kartBolumuGuncelle(kapId, notId, veriObj, ufukListesi) {
+  const kap = byId(kapId);
+  kap.textContent = "";
+  const yok = !veriObj || !veriObj.ufuklar;
+  byId(notId).hidden = !yok;
+  if (yok) return;
+  for (const ufuk of ufukListesi) {
+    const bilgi = veriObj.ufuklar[ufuk];
+    if (bilgi) kap.appendChild(yonKartiOlustur(ufuk, bilgi));
+  }
+}
+
+function yonKartlariGuncelle() {
+  kartBolumuGuncelle("yonKartlari", "yonNot",
+    DURUM.ozet && DURUM.ozet.tahminler, ["1ay", "3ay", "6ay"]);
+  kartBolumuGuncelle("kisaVadeKartlari", "kisaVadeNot",
+    DURUM.ozet && DURUM.ozet.kisa_vade, ["1g", "1h"]);
+}
+
+/* ---------------- 3. senaryo yelpazesi ---------------- */
+function senaryoCiz() {
+  const senaryolar = DURUM.ozet && DURUM.ozet.senaryolar;
+  const yok = !senaryolar || !senaryolar.baslangic || !senaryolar.ufuklar;
+  byId("senaryoIcerik").hidden = yok;
+  byId("senaryoNot").hidden = !yok;
+  if (yok) return;
+  const p = palet();
+  const baslangic = senaryolar.baslangic;
+  const etiketler = [tarihKisa(baslangic.tarih)];
+  const noktalar = [{ p10: baslangic.gram_tl, p25: baslangic.gram_tl, p50: baslangic.gram_tl, p75: baslangic.gram_tl, p90: baslangic.gram_tl }];
+  for (const ay of ["12", "24"]) {
+    const ufuk = senaryolar.ufuklar[ay];
+    if (ufuk && ufuk.gram_tl) {
+      etiketler.push(ayEkle(baslangic.tarih, Number(ay)));
+      noktalar.push(ufuk.gram_tl);
+    }
+  }
+  if (noktalar.length < 2) { byId("senaryoIcerik").hidden = true; byId("senaryoNot").hidden = false; return; }
+  const dizi = (anahtar) => noktalar.map((n) => (n && n[anahtar] !== undefined) ? n[anahtar] : null);
+  const gizliCizgi = { borderColor: "rgba(0,0,0,0)", borderWidth: 0, pointRadius: 0, pointHitRadius: 0, fill: false };
+  cizVeyaYenile("senaryo", "grafikSenaryo", {
+    type: "line",
+    data: {
+      labels: etiketler,
+      datasets: [
+        Object.assign({ kisaAd: "p10", data: dizi("p10") }, gizliCizgi),
+        Object.assign({ kisaAd: "p90", data: dizi("p90") }, gizliCizgi,
+          { fill: "-1", backgroundColor: seffaf(p.seri1, 0.10) }),
+        Object.assign({ kisaAd: "p25", data: dizi("p25") }, gizliCizgi),
+        Object.assign({ kisaAd: "p75", data: dizi("p75") }, gizliCizgi,
+          { fill: "-1", backgroundColor: seffaf(p.seri1, 0.18) }),
+        {
+          kisaAd: "p50 (medyan)", data: dizi("p50"),
+          borderColor: p.seri1, borderWidth: 2, tension: 0, fill: false,
+          pointRadius: 4, pointHoverRadius: 5, pointHitRadius: 16,
+          pointBackgroundColor: p.seri1, pointBorderColor: p.kart, pointBorderWidth: 2
+        }
+      ]
+    },
+    options: Object.assign(ortakSecenekler(p), {
+      plugins: {
+        legend: { display: false },
+        tooltip: ipucuAyar(p, {
+          label: (oge) => oge.dataset.kisaAd + ": " + sayi(oge.parsed.y, 0) + " TL"
+        })
+      }
+    })
+  });
+  if (GRAFIK.senaryo) {
+    GRAFIK.senaryo.options.plugins.tooltip.itemSort = (a, b) => b.parsed.y - a.parsed.y;
+    GRAFIK.senaryo.update();
+  }
+}
+
+/* ---------------- 4. kıyas tablosu ---------------- */
+function bantHucresi(kalem, ondalik) {
+  const hucre = document.createElement("td");
+  if (!kalem || kalem.p50 === undefined) { hucre.textContent = "—"; return hucre; }
+  const deger = document.createElement("div");
+  deger.className = "deger";
+  deger.textContent = yuzdeOran(kalem.p50, ondalik);
+  hucre.appendChild(deger);
+  if (kalem.p10 !== undefined && kalem.p90 !== undefined) {
+    const bant = document.createElement("div");
+    bant.className = "bant-metni";
+    bant.textContent = "(" + yuzdeOran(kalem.p10, 0) + " … " + yuzdeOran(kalem.p90, 0) + ")";
+    hucre.appendChild(bant);
+  }
+  return hucre;
+}
+function kiyasDoldur() {
+  const kiyas = DURUM.ozet && DURUM.ozet.kiyas;
+  const yok = !kiyas || Object.keys(kiyas).length === 0;
+  byId("kiyasTablo").parentElement.hidden = yok;
+  byId("kiyasNot").hidden = !yok;
+  if (yok) return;
+  const aylar = Object.keys(kiyas).sort((a, b) => Number(a) - Number(b));
+  const baslik = byId("kiyasBaslik");
+  baslik.textContent = "";
+  baslik.appendChild(document.createElement("th"));
+  for (const ay of aylar) {
+    const hucre = document.createElement("th");
+    hucre.textContent = ay + " ay";
+    baslik.appendChild(hucre);
+  }
+  const govde = byId("kiyasGovde");
+  govde.textContent = "";
+  const satirlar = [
+    ["Gram altın (senaryo medyanı)", (k) => bantHucresi(k.altin, 1)],
+    ["Dolar kuru (senaryo medyanı)", (k) => bantHucresi(k.dolar, 1)],
+    ["Mevduat (bileşik)", (k) => {
+      const hucre = document.createElement("td");
+      const deger = document.createElement("div");
+      deger.className = "deger";
+      deger.textContent = yuzdeOran(k.mevduat, 1);
+      hucre.appendChild(deger);
+      return hucre;
+    }]
+  ];
+  for (const [ad, hucreYap] of satirlar) {
+    const satir = document.createElement("tr");
+    const adHucre = document.createElement("td");
+    adHucre.textContent = ad;
+    satir.appendChild(adHucre);
+    for (const ay of aylar) satir.appendChild(hucreYap(kiyas[ay] || {}));
+    govde.appendChild(satir);
+  }
+}
+
+/* ---------------- 5. isabet geçmişi ---------------- */
+function isabetCiz() {
+  const hepsi = DURUM.isabet;
+  const seri = hepsi && hepsi[DURUM.ufuk];
+  const yok = !seri || !seri.tarihler || seri.tarihler.length === 0;
+  byId("grafikIsabet").parentElement.parentElement.hidden = yok;
+  byId("isabetNot").hidden = !yok;
+  if (yok) return;
+  const p = palet();
+  cizVeyaYenile("isabet", "grafikIsabet", {
+    type: "line",
+    data: {
+      labels: seri.tarihler.map(tarihKisa),
+      datasets: [
+        {
+          label: "Model", data: seri.isabet, borderColor: p.seri1, borderWidth: 2,
+          pointRadius: 0, pointHitRadius: 10, tension: 0.2, fill: false, pointStyle: "line"
+        },
+        {
+          label: "Taban (çoğunluk sınıfı)", data: seri.taban, borderColor: p.soluk, borderWidth: 2,
+          pointRadius: 0, pointHitRadius: 10, tension: 0.2, fill: false, pointStyle: "line"
+        }
+      ]
+    },
+    options: Object.assign(ortakSecenekler(p, (v) => "%" + sayi(v * 100, 0)), {
+      plugins: {
+        legend: { display: true, labels: { color: p.ikincil, usePointStyle: true, boxWidth: 18, boxHeight: 2 } },
+        tooltip: ipucuAyar(p, {
+          label: (oge) => oge.dataset.label + ": " + yuzdeOran(oge.parsed.y, 0)
+        })
+      }
+    })
+  });
+}
+
+/* ---------------- 6. fiyat grafikleri (ayrı eksenler, ayrı grafikler) ---------------- */
+function fiyatCiz() {
+  const seri = DURUM.fiyat;
+  const yok = !seri || !seri.tarihler || seri.tarihler.length === 0;
+  byId("grafikGram").parentElement.parentElement.hidden = yok;
+  byId("fiyatNot").hidden = !yok;
+  if (yok) return;
+  const p = palet();
+  const etiketler = seri.tarihler.map(tarihKisa);
+  const tekSeri = (veri, renk, birim, ondalik) => ({
+    type: "line",
+    data: {
+      labels: etiketler,
+      datasets: [{
+        data: veri, borderColor: renk, borderWidth: 2,
+        pointRadius: 0, pointHitRadius: 10, tension: 0.1, spanGaps: true,
+        fill: true, backgroundColor: seffaf(renk, 0.10)
+      }]
+    },
+    options: Object.assign(ortakSecenekler(p, (v) => sayi(v, 0)), {
+      plugins: {
+        legend: { display: false },
+        tooltip: ipucuAyar(p, {
+          label: (oge) => sayi(oge.parsed.y, ondalik) + " " + birim
+        })
+      }
+    })
+  });
+  cizVeyaYenile("gram", "grafikGram", tekSeri(seri.gram_tl, p.seri1, "TL", 2));
+  cizVeyaYenile("kur", "grafikKur", tekSeri(seri.usdtry, p.seri2, "TL/$", 2));
+}
+
+/* ---------------- veri çekme ---------------- */
+async function jsonGetir(yol) {
+  const yanit = await fetch(yol, { cache: "no-store" });
+  if (!yanit.ok) throw new Error(yol + " -> " + yanit.status);
+  return yanit.json();
+}
+async function ozetYenile() {
+  /* Ağ hatasında eldeki görünüm korunur (iskelet/temizleme yok). */
+  try {
+    const [ozet, canliSeri] = await Promise.all([
+      jsonGetir("/api/ozet"), jsonGetir("/api/canli-seri")
+    ]);
+    DURUM.ozet = ozet;
+    DURUM.canli = canliSeri;
+    ustSeritGuncelle();
+    yonKartlariGuncelle();
+    senaryoCiz();
+    kiyasDoldur();
+    canliCiz();
+    kararGuncelle();
+    takvimGuncelle();
+    saglikGuncelle();
+    sicilYukle(); /* beklemeden: sicil ayrı uçtan gelir */
+  } catch (hata) { /* sessiz: bir sonraki denemede düzelir */ }
+}
+function tarihTr(iso) {
+  const parcalar = String(iso || "").split("-");
+  return parcalar.length === 3 ? parcalar[2] + "." + parcalar[1] + "." + parcalar[0] : String(iso || "—");
+}
+
+/* ---------------- 2c. yaklaşan olaylar ---------------- */
+function takvimGuncelle() {
+  const liste = byId("takvimListe");
+  liste.textContent = "";
+  const takvim = DURUM.ozet && DURUM.ozet.takvim;
+  const olaylar = (takvim && takvim.olaylar) || [];
+  byId("takvimBos").hidden = olaylar.length > 0;
+  byId("takvimUyari").hidden = !(takvim && takvim.guncelleme_gerekli);
+  for (const olay of olaylar) {
+    const satir = document.createElement("li");
+    const kalan = olay.kalan_gun === 0 ? "BUGÜN" :
+      olay.kalan_gun === 1 ? "yarın" : olay.kalan_gun + " gün sonra";
+    satir.textContent = tarihTr(olay.tarih) + " — " + olay.ad + " (" + kalan + ")";
+    liste.appendChild(satir);
+  }
+}
+
+/* ---------------- 5b. canlı tahmin sicili ---------------- */
+const SICIL_DURUMLARI = { bekliyor: "⏳ bekliyor", dogru: "✓ doğru", yanlis: "✗ yanlış" };
+function sicilGuncelle() {
+  const govde = byId("sicilGovde");
+  govde.textContent = "";
+  const veri = DURUM.sicil;
+  const kayitlar = (veri && veri.kayitlar) || [];
+  byId("sicilBos").hidden = kayitlar.length > 0;
+  for (const kayit of kayitlar) {
+    const satir = document.createElement("tr");
+    const hucreler = [
+      tarihTr(kayit.son_veri_tarihi),
+      UFUK_ETIKETLERI[kayit.ufuk] || kayit.ufuk,
+      yuzdeOran(kayit.olasilik, 0) + " yukarı",
+      SICIL_DURUMLARI[kayit.durum] || kayit.durum,
+    ];
+    for (const metin of hucreler) {
+      const hucre = document.createElement("td");
+      hucre.textContent = metin;
+      satir.appendChild(hucre);
+    }
+    govde.appendChild(satir);
+  }
+  const ozetEl = byId("sicilOzet");
+  const ozet = (veri && veri.ozet) || {};
+  const parcalar = [];
+  for (const ufuk of ["1g", "1h", "1ay", "3ay", "6ay"]) {
+    if (ozet[ufuk]) {
+      parcalar.push((UFUK_ETIKETLERI[ufuk] || ufuk) + ": " + ozet[ufuk].dogru + "/" +
+        ozet[ufuk].cozulen + " (" + yuzdeOran(ozet[ufuk].isabet, 0) + ")");
+    }
+  }
+  ozetEl.textContent = parcalar.length
+    ? "Canlı isabet — " + parcalar.join(" · ")
+    : "Henüz sonuçlanmış tahmin yok; kayıtlar ufukları dolunca burada puanlanacak.";
+}
+async function sicilYukle() {
+  try {
+    DURUM.sicil = await jsonGetir("/api/gunluk");
+  } catch (hata) { DURUM.sicil = null; }
+  sicilGuncelle();
+}
+
+/* ---------------- 1b. karar görünümü ---------------- */
+function kararGuncelle() {
+  const karar = DURUM.ozet && DURUM.ozet.senaryolar && DURUM.ozet.senaryolar.karar;
+  const ozetEl = byId("kararOzet");
+  const mevduatEl = byId("kararMevduat");
+  if (!karar || !karar.aylik_kar_olasiligi) {
+    ozetEl.textContent = "Karar görünümü için senaryo verisi henüz üretilmedi.";
+    mevduatEl.textContent = "";
+    return;
+  }
+  const olasiliklar = karar.aylik_kar_olasiligi;
+  const ilk = karar.ilk_kar_ayi || {};
+  const parcalar = [];
+  if (ilk.p50 !== null && ilk.p50 !== undefined) {
+    parcalar.push("Senaryoların yarısı en geç " + ilk.p50 + " ay içinde kâra geçiyor" +
+      (ilk.p25 !== null ? " (çeyrekler: " + ilk.p25 + "–" + ilk.p75 + " ay)" : "") + ".");
+  }
+  if (karar.hic_karsiz_orani_24ay !== undefined) {
+    parcalar.push("Senaryoların " + yuzdeOran(karar.hic_karsiz_orani_24ay, 0) +
+      "'i 24 ay boyunca hiç kâra geçmiyor.");
+  }
+  if (olasiliklar.length >= 24) {
+    parcalar.push("Kârda olma olasılığı: 12. ayda " + yuzdeOran(olasiliklar[11], 0) +
+      ", 24. ayda " + yuzdeOran(olasiliklar[23], 0) +
+      " (makas " + sayi(karar.makas_yuzde, 1) + "% düşülmüş).");
+  }
+  ozetEl.textContent = parcalar.join(" ");
+  const gecme = karar.mevduati_gecme || {};
+  mevduatEl.textContent = (gecme["12"] !== undefined)
+    ? "Mevduatı (yıllık %" + sayi(karar.mevduat_yillik_yuzde, 0) + ") geçme olasılığı: 12 ayda " +
+      yuzdeOran(gecme["12"], 0) + " · 24 ayda " + yuzdeOran(gecme["24"], 0) + "."
+    : "";
+  kararCiz(olasiliklar);
+}
+function kararCiz(olasiliklar) {
+  if (!olasiliklar) {
+    const karar = DURUM.ozet && DURUM.ozet.senaryolar && DURUM.ozet.senaryolar.karar;
+    olasiliklar = (karar && karar.aylik_kar_olasiligi) || [];
+  }
+  if (!olasiliklar.length) return;
+  const p = palet();
+  const aylar = olasiliklar.map((_, i) => (i + 1) + ". ay");
+  cizVeyaYenile("karar", "grafikKarar", {
+    type: "line",
+    data: {
+      labels: aylar,
+      datasets: [
+        {
+          label: "Kârda olma olasılığı", data: olasiliklar.map((o) => o * 100),
+          borderColor: p.seri1, backgroundColor: seffaf(p.seri1, 0.10),
+          borderWidth: 2, pointRadius: 0, fill: true, tension: 0.2,
+        },
+        {
+          label: "%50 (yazı-tura)", data: olasiliklar.map(() => 50),
+          borderColor: p.soluk, borderWidth: 2, borderDash: [6, 4], pointRadius: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { labels: { color: p.ikincil } },
+        tooltip: ipucuAyar(p, {
+          label: (b) => b.dataset.label + ": %" + sayi(b.parsed.y, 1),
+        }),
+      },
+      scales: {
+        x: { grid: { display: false }, border: { color: p.izgara },
+             ticks: { color: p.ikincil, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+        y: { min: 0, max: 100, grid: { color: p.izgara }, border: { display: false },
+             ticks: { color: p.ikincil, callback: (v) => "%" + v } },
+      },
+    },
+  });
+}
+
+/* ---------------- 2d. model sağlığı ---------------- */
+const PSI_SIMGELERI = { stabil: "🟢 Stabil", izleniyor: "🟡 İzleniyor", alarm: "🔴 ALARM", veri_az: "⏳ veri az" };
+const UYUM_METNI = { uyumlu: "✓ uyumlu", beklenenin_altinda: "✗ BEKLENENİN ALTINDA", veri_az: "⏳ veri az" };
+function saglikGuncelle() {
+  const saglik = DURUM.ozet && DURUM.ozet.saglik;
+  const psiEl = byId("saglikPsi");
+  const canliEl = byId("saglikCanli");
+  if (!saglik) {
+    psiEl.textContent = "Sağlık raporu henüz üretilmedi (ilk gecelik güncellemede oluşur).";
+    canliEl.textContent = "";
+    return;
+  }
+  const psi = saglik.psi || {};
+  let psiMetin = "Veri kayması (PSI): " + (PSI_SIMGELERI[psi.durum] || psi.durum || "—");
+  if (psi.en_yuksek_yuzdelik !== undefined) {
+    psiMetin += " — en yüksek tarihsel yüzdelik " + sayi(psi.en_yuksek_yuzdelik, 0) +
+      " (" + (psi.en_yuksek_ozellik || "—") + "), ortalama " + sayi(psi.ortalama_yuzdelik, 0);
+  }
+  psiEl.textContent = psiMetin;
+  const uyum = saglik.canli_uyum || {};
+  const parcalar = [];
+  for (const ufuk of ["1g", "1h", "1ay", "3ay", "6ay"]) {
+    if (!uyum[ufuk]) continue;
+    const u = uyum[ufuk];
+    let metin = (UFUK_ETIKETLERI[ufuk] || ufuk) + ": " + (UYUM_METNI[u.durum] || u.durum);
+    if (u.durum !== "veri_az") {
+      metin += " (canlı " + yuzdeOran(u.canli_isabet, 0) + " / beklenen " + yuzdeOran(u.beklenen_isabet, 0) + ")";
+    } else {
+      metin += " (n=" + sayi(u.cozulen, 0) + "/20)";
+    }
+    parcalar.push(metin);
+  }
+  canliEl.textContent = parcalar.length
+    ? "Canlı uyum — " + parcalar.join(" · ")
+    : "Canlı uyum: henüz sonuçlanmış tahmin yok.";
+}
+
+/* ---------------- 5a. kalibrasyon ---------------- */
+function kalibrasyonCiz() {
+  const kovalar = (DURUM.kalib || {})[DURUM.kalibUfuk] || [];
+  byId("kalibrasyonNot").hidden = kovalar.length > 0;
+  const p = palet();
+  cizVeyaYenile("kalibrasyon", "grafikKalibrasyon", {
+    type: "scatter",
+    data: {
+      datasets: [
+        {
+          label: "Köşegen (mükemmel kalibrasyon)", type: "line", showLine: true,
+          data: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+          borderColor: p.soluk, borderWidth: 2, borderDash: [6, 4], pointRadius: 0,
+        },
+        {
+          label: "Model kovaları",
+          data: kovalar.map((k) => ({ x: k.tahmin_ort, y: k.gerceklesen_oran, adet: k.adet })),
+          backgroundColor: p.seri1, pointRadius: 6, pointHoverRadius: 8,
+        },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { min: 0, max: 1, title: { display: true, text: "Modelin söylediği olasılık", color: p.ikincil },
+             ticks: { color: p.soluk, callback: (v) => yuzdeOran(v, 0) }, grid: { color: p.izgara } },
+        y: { min: 0, max: 1, title: { display: true, text: "Gerçekleşen yukarı oranı", color: p.ikincil },
+             ticks: { color: p.soluk, callback: (v) => yuzdeOran(v, 0) }, grid: { color: p.izgara } },
+      },
+      plugins: {
+        legend: { labels: { color: p.ikincil } },
+        tooltip: ipucuAyar(p, {
+          label: (b) => b.raw.adet !== undefined
+            ? "söylenen " + yuzdeOran(b.raw.x, 0) + " → gerçekleşen " + yuzdeOran(b.raw.y, 0) + " (" + b.raw.adet + " tahmin)"
+            : "",
+        }),
+      },
+    },
+  });
+}
+async function kalibrasyonYukle() {
+  try {
+    DURUM.kalib = await jsonGetir("/api/kalibrasyon");
+  } catch (hata) { DURUM.kalib = null; }
+  kalibrasyonCiz();
+}
+
+async function isabetYukle() {
+  try {
+    DURUM.isabet = await jsonGetir("/api/isabet-gecmisi");
+  } catch (hata) { DURUM.isabet = null; }
+  isabetCiz();
+}
+async function aralikYukle(aralik) {
+  try {
+    DURUM.fiyat = await jsonGetir("/api/fiyat-serisi?aralik=" + encodeURIComponent(aralik));
+  } catch (hata) { /* eldeki seri korunur */ }
+  fiyatCiz();
+}
+
+/* ---------------- düğmeler ve tema ---------------- */
+function dugmeGrubuKur(kapKimligi, veriAlani, tiklayinca) {
+  const kap = byId(kapKimligi);
+  kap.addEventListener("click", (olay) => {
+    const dugme = olay.target.closest("button");
+    if (!dugme) return;
+    for (const eleman of kap.querySelectorAll("button")) eleman.classList.remove("aktif");
+    dugme.classList.add("aktif");
+    tiklayinca(dugme.dataset[veriAlani]);
+  });
+}
+dugmeGrubuKur("ufukDugmeleri", "ufuk", (ufuk) => { DURUM.ufuk = ufuk; isabetCiz(); });
+dugmeGrubuKur("aralikDugmeleri", "aralik", (aralik) => { DURUM.aralik = aralik; aralikYukle(aralik); });
+dugmeGrubuKur("kalibDugmeleri", "kufuk", (ufuk) => { DURUM.kalibUfuk = ufuk; kalibrasyonCiz(); });
+
+const temaSorgusu = window.matchMedia("(prefers-color-scheme: dark)");
+const temaDegisti = () => { senaryoCiz(); isabetCiz(); fiyatCiz(); canliCiz(); kalibrasyonCiz(); kararCiz(); };
+if (temaSorgusu.addEventListener) temaSorgusu.addEventListener("change", temaDegisti);
+else if (temaSorgusu.addListener) temaSorgusu.addListener(temaDegisti);
+
+/* ---------------- başlat ---------------- */
+async function baslat() {
+  await ozetYenile();
+  await isabetYukle();
+  await kalibrasyonYukle();
+  await aralikYukle(DURUM.aralik);
+  setInterval(ozetYenile, 60000); /* 60 sn'de bir /api/ozet yenilenir */
+}
+baslat();
+</script>
+</body>
+</html>

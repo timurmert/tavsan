@@ -1,0 +1,11 @@
+{
+  "_aciklama": "Piyasayı oynatan PLANLI olaylar (elle güncellenir; API/anahtar gerekmez). Yılda bir kez yeni yılın tarihlerini ekleyin: Fed takvimi federalreserve.gov/monetarypolicy/fomccalendars.htm, TCMB PPK takvimi tcmb.gov.tr duyurular/takvim. Panel, gelecekte olay kalmayınca uyarı gösterir.",
+  "olaylar": [
+    { "tarih": "2026-09-10", "tur": "tcmb", "ad": "TCMB PPK faiz kararı" },
+    { "tarih": "2026-09-16", "tur": "fed", "ad": "Fed faiz kararı (FOMC)" },
+    { "tarih": "2026-10-22", "tur": "tcmb", "ad": "TCMB PPK faiz kararı" },
+    { "tarih": "2026-10-28", "tur": "fed", "ad": "Fed faiz kararı (FOMC)" },
+    { "tarih": "2026-12-09", "tur": "fed", "ad": "Fed faiz kararı (FOMC)" },
+    { "tarih": "2026-12-10", "tur": "tcmb", "ad": "TCMB PPK faiz kararı" }
+  ]
+}

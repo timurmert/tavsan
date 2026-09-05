@@ -1,0 +1,13 @@
+# Calisma verisi: VPS'in/makinenin kendi mali, koddan ayri yasar.
+# canli.db ve tahmin_gunlugu.jsonl telafi edilemez arsivlerdir — git'e girmez,
+# guncellemelerde uzerine yazilmaz, ayrica yedeklenir.
+data/
+
+# Sanal ortam ve Python artiklari
+venv/
+__pycache__/
+*.pyc
+
+# Makineye ozel ayarlar (VPS'te parola dolu, local'de bos olabilir).
+# Ilk kurulumda ayarlar.ornek.json'dan kopyalanir.
+ayarlar.json

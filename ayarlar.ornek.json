@@ -1,0 +1,9 @@
+{
+  "panel_host": "0.0.0.0",
+  "panel_port": 8050,
+  "mevduat_faizi_yillik_yuzde": 40.0,
+  "alis_satis_makasi_yuzde": 1.3,
+  "panel_parola": "",
+  "veri_baslangic": "2005-01-01",
+  "gunluk_guncelleme_saat": "02:30"
+}
