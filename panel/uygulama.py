@@ -58,6 +58,9 @@ def _ayarlar_oku(yol: Path) -> dict:
         "veri_baslangic": "2005-01-01",
         "gunluk_guncelleme_saat": "02:30",
         "panel_parola": "",  # boş = kimlik doğrulama kapalı (yerel kullanım)
+        "alis_satis_makasi_yuzde": 1.3,
+        "portfoy_gram": 0.0,           # elinizdeki gram (0 = pozisyon satırı kapalı)
+        "portfoy_maliyet_tl": 0.0,     # gram başına ortalama maliyetiniz
     }
     okunan = _json_oku(Path(yol))
     if not isinstance(okunan, dict):  # kök dict değilse (liste/metin) yok say
@@ -350,6 +353,62 @@ def _kalibrasyon(data_dir: Path) -> dict:
     return sonuc
 
 
+def _haftalik_yedek(data_dir: Path) -> None:
+    """Pazar günleri telafi edilemez dosyaları data/yedek/ altına kopyalar.
+
+    canli.db sqlite backup API ile (toplayıcı yazarken bile güvenli) alınır;
+    tahmin_gunlugu.jsonl, lig_durumu.json ve bildirimler.jsonl kopyalanır.
+    Her dosyadan en yeni 4 yedek tutulur.
+    """
+    import shutil
+
+    if datetime.now().weekday() != 6:  # yalnız pazar
+        return
+    data_dir = Path(data_dir)
+    yedek_dizin = data_dir / "yedek"
+    etiket = datetime.now().strftime("%Y%m%d")
+    hedef_db = yedek_dizin / f"canli_{etiket}.db"
+    if hedef_db.exists():  # bu haftanın yedeği alınmış
+        return
+    yedek_dizin.mkdir(parents=True, exist_ok=True)
+
+    kaynak_db = data_dir / "canli.db"
+    if kaynak_db.exists():
+        kaynak = sqlite3.connect(str(kaynak_db))
+        try:
+            hedef = sqlite3.connect(str(hedef_db))
+            try:
+                kaynak.backup(hedef)
+            finally:
+                hedef.close()
+        finally:
+            kaynak.close()
+
+    for ad in ("tahmin_gunlugu.jsonl", "lig_durumu.json", "bildirimler.jsonl"):
+        kaynak_yol = data_dir / ad
+        if kaynak_yol.exists():
+            shutil.copy2(kaynak_yol, yedek_dizin / f"{etiket}_{ad}")
+
+    # Eski yedekleri buda: desen başına en yeni 4 kalsın
+    for desen in ("canli_*.db", "*_tahmin_gunlugu.jsonl",
+                  "*_lig_durumu.json", "*_bildirimler.jsonl"):
+        eskiler = sorted(yedek_dizin.glob(desen))[:-4]
+        for eski in eskiler:
+            try:
+                eski.unlink()
+            except OSError:
+                pass
+
+    try:
+        from model.bildirim import ekle as bildirim_ekle
+        bildirim_ekle(data_dir, "yedek",
+                      "Haftalık yedek alındı (canlı arşiv, sicil, lig, bildirimler).",
+                      anahtar=f"yedek:{etiket}")
+    except Exception:
+        pass
+    print(f"[panel] haftalık yedek alındı: {yedek_dizin}")
+
+
 # ------------------------------------------------------- arka plan güncelleme
 
 # Açılıştaki bayat-veri thread'i ile günlük cron işi aynı zinciri eşzamanlı
@@ -391,12 +450,38 @@ def _arka_plan_yenile(data_dir: Path) -> None:
             print("[panel] kısa vade güncellemesi tamamlandı")
         except Exception as hata:
             print(f"[panel] kısa vade güncellemesi başarısız: {hata}")
-        try:  # sağlık raporu en sonda: tüm güncel çıktıları değerlendirir
+        try:
+            from model.volatilite import hesapla as volatilite_hesapla
+            volatilite_hesapla(data_dir=data_dir)
+            print("[panel] oynaklık tahmini güncellendi")
+        except Exception as hata:
+            print(f"[panel] oynaklık tahmini başarısız: {hata}")
+        try:
+            from model.lig import uret as lig_uret
+            lig_uret(data_dir=data_dir)
+            print("[panel] portföy ligi güncellendi")
+        except Exception as hata:
+            print(f"[panel] portföy ligi başarısız: {hata}")
+        try:  # sağlık raporu sonda: tüm güncel çıktıları değerlendirir
             from model.saglik import rapor_uret as saglik_uret
             saglik_uret(data_dir=data_dir)
             print("[panel] sağlık raporu güncellendi")
         except Exception as hata:
             print(f"[panel] sağlık raporu başarısız: {hata}")
+        try:  # bildirimler + haftalık yedek en sonda
+            from model.bildirim import ekle as bildirim_ekle, tara as bildirim_tara
+            bugun = datetime.now().date().isoformat()
+            bildirim_ekle(
+                data_dir, "zincir", "Gecelik güncelleme tamamlandı: veriler, "
+                "modeller, senaryolar, lig ve sağlık raporu tazelendi.",
+                anahtar=f"zincir:{bugun}",
+            )
+            yeni = bildirim_tara(data_dir)
+            if yeni:
+                print(f"[panel] {yeni} yeni bildirim üretildi")
+            _haftalik_yedek(data_dir)
+        except Exception as hata:
+            print(f"[panel] bildirim/yedek adımı başarısız: {hata}")
     finally:
         _YENILEME_KILIDI.release()
 
@@ -501,10 +586,34 @@ def uygulama_olustur(data_dir: Path = VARSAYILAN_DATA_DIR,
             if kapanislar:
                 son_veri_tarihi = kapanislar[-1][0]
 
+        # Kullanıcının pozisyonu (ayarlar.json'dan; 0 gram = kapalı).
+        # Değerleme dürüst: satarken alacağınız fiyat (alış tarafı) kullanılır.
+        portfoy = None
+        try:
+            gram_adet = float(ayarlar.get("portfoy_gram") or 0)
+            if gram_adet > 0 and canli and canli.get("fiyat"):
+                makas = float(ayarlar.get("alis_satis_makasi_yuzde", 1.3))
+                birim = (float(canli["alis"]) if canli.get("alis")
+                         else float(canli["fiyat"]) * (1.0 - makas / 200.0))
+                maliyet_birim = float(ayarlar.get("portfoy_maliyet_tl") or 0)
+                portfoy = {
+                    "gram": gram_adet,
+                    "birim_deger": round(birim, 2),
+                    "toplam_deger": round(gram_adet * birim, 2),
+                    "maliyet_birim": maliyet_birim or None,
+                    "kar_zarar_yuzde": (
+                        round((birim / maliyet_birim - 1.0) * 100, 2)
+                        if maliyet_birim > 0 else None),
+                }
+        except (TypeError, ValueError):
+            portfoy = None
+
         return jsonify({
             "canli": canli,
+            "portfoy": portfoy,
             "tahminler": tahminler,
             "kisa_vade": _json_oku(data_dir / "kisa_vade_tahminler.json"),
+            "volatilite": _json_oku(data_dir / "volatilite.json"),
             "takvim": _takvim_bilgisi(),
             "saglik": _json_oku(data_dir / "saglik.json"),
             "senaryolar": senaryolar,
@@ -579,6 +688,18 @@ def uygulama_olustur(data_dir: Path = VARSAYILAN_DATA_DIR,
     @app.get("/api/kalibrasyon")
     def api_kalibrasyon():
         return jsonify(_kalibrasyon(data_dir))
+
+    @app.get("/api/bildirimler")
+    def api_bildirimler():
+        try:
+            from model.bildirim import oku as bildirim_oku
+            return jsonify({"bildirimler": bildirim_oku(data_dir, adet=50)})
+        except Exception:
+            return jsonify({"bildirimler": []})
+
+    @app.get("/api/lig")
+    def api_lig():
+        return jsonify(_json_oku(data_dir / "lig.json") or {})
 
     try:
         _zamanlayici_kur(app, data_dir, ayarlar)

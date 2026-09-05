@@ -252,6 +252,37 @@ yapmak dağılım kayması yaratır); karar bağlamı olarak panelde gösterilir
 - Gecelik zincirin SON adımıdır (tüm güncel çıktıları değerlendirir).
   CLI: `python -m model.saglik`.
 
+### model/volatilite.py (oynaklık tahmini)
+- `hesapla(data_dir=VARSAYILAN) -> dict` — HAR modeli: gelecek 5 işlem
+  gününün gerçekleşen oynaklığı (yıllık), geçmiş 1h/1a/3a oynaklıklarının
+  doğrusal birleşimiyle tahmin edilir. Walk-forward (genişleyen pencere,
+  aylık yeniden eğitim), taban = süreklilik ("gelecek hafta = geçen hafta"),
+  MAE kıyası. `data/volatilite.json`: gelecek_hafta_yillik_vol,
+  tarihsel_yuzdelik, rejim (sakin/normal/dalgali), mae, taban_mae,
+  tabani_geciyor, n_test. CLI: `python -m model.volatilite`.
+
+### model/lig.py (sanal portföy ligi)
+- `uret(data_dir=VARSAYILAN) -> dict` — davranış stratejileri yarışı,
+  `data/lig.json`'a atomik yazar. Stratejiler: al_tut, duzenli_alici (ilk 12
+  ay eşit taksit), model_takipcisi (1ay olasılığı ≥0,55 → altın, ≤0,45 →
+  nakit), dusus_avcisi (zirveden %5 düşüşte girer), karma (50/50, ±5 puan
+  bandında dengeler), mevduatci (yalnız canlı). Her işlemde makas/2 ödenir;
+  değerleme alış tarafından (tasfiye değeri). BACKTEST: aylık kapanışlar,
+  model walk-forward'ının ilk tarihinden; nakit FAİZSİZ (tarihsel mevduat
+  verisi yok — dipnot zorunlu). CANLI: kurulum gününden ileri; nakit güncel
+  mevduat oranıyla faiz işler; durum `data/lig_durumu.json`'da kalıcıdır
+  (TELAFİ EDİLEMEZ — haftalık yedeğe dahildir). CLI: `python -m model.lig`.
+
+### model/bildirim.py (panel içi bildirim merkezi)
+- `ekle(data_dir, tur, mesaj, anahtar=None) -> bool` — data/bildirimler.jsonl
+  dosyasına ekler; aynı `anahtar` bir kez yazılır (mükerrer koruması).
+- `oku(data_dir, adet=50)` — en yeniler (yeni üstte).
+- `tara(data_dir) -> int` — durumdan bildirim üretir: yaklaşan takvim
+  olayları (bugün/yarın), PSI izleniyor/alarm (ayda bir), canlı uyum
+  beklenenin altında (ayda bir), sonuçlanan sicil tahminleri, canlı
+  ağırlıklara geçiş. Gecelik zincirin sonunda çağrılır.
+- Türler: zincir, saglik, takvim, sicil, agirlik, yedek, hata.
+
 ### toplayici/canli_toplayici.py
 - Bağımsız süreç: `python -m toplayici.canli_toplayici`
 - wss://hrmsocketonly.haremaltin.com:443, Socket.IO, transport websocket,
@@ -285,8 +316,16 @@ yapmak dağılım kayması yaratır); karar bağlamı olarak panelde gösterilir
   - `GET /api/kalibrasyon` → ufuk başına güvenilirlik kovaları: olasılıklar
     10 eşit kovaya bölünür, ≥10 kayıtlı kovalar için
     {tahmin_ort, gerceklesen_oran, adet} listesi.
-  - /api/ozet ayrıca `saglik` (saglik.json içeriği; yoksa null) alanı taşır;
-    panelde "Model sağlığı" kutusu bundan beslenir.
+  - `GET /api/bildirimler` → {"bildirimler": [en yeni 50, yeni üstte]}.
+  - `GET /api/lig` → lig.json içeriği (yoksa boş nesne).
+  - /api/ozet ayrıca şu alanları taşır: `saglik` (saglik.json), `volatilite`
+    (volatilite.json), `portfoy` (ayarlar'daki portfoy_gram > 0 ise: gram,
+    birim_deger — satarken alınacak alış fiyatıyla —, toplam_deger,
+    maliyet_birim, kar_zarar_yuzde; değilse null).
+- Gecelik zincir sırası: indir → egit → senaryo → kisa_vade → volatilite →
+  lig → saglik → bildirimler (zincir kaydı + tara) → haftalık yedek
+  (yalnız pazar: canli.db sqlite-backup + sicil/lig/bildirim kopyaları
+  data/yedek/ altına, desen başına en yeni 4 tutulur).
 - `kiyas` hesabı (panelin yaptığı tek hesap): 12 ve 24 ay için
   - altın: senaryo p50 fiyat / başlangıç - 1 (ayrıca p10 ve p90 aralığı)
   - dolar: usdtry senaryo p50 / başlangıç - 1

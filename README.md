@@ -54,6 +54,7 @@ takvim.json  planlı olaylar (Fed/TCMB faiz kararları) — YILDA BİR elle gün
 | `panel_port` | Panelin dinlediği port (varsayılan 8050) |
 | `mevduat_faizi_yillik_yuzde` | Kıyas tablosundaki mevduat oranı — **bankanızın güncel oranıyla değiştirin** |
 | `alis_satis_makasi_yuzde` | "Bugün alırsam?" görünümünün tam tur maliyeti (al-sat makası; Harem ~%1,3) |
+| `portfoy_gram` / `portfoy_maliyet_tl` | Elinizdeki gram ve gram başına maliyetiniz — doldurursanız üst şeritte pozisyonunuz ve K/Z'niz görünür |
 | `panel_parola` | Doluysa panel HTTP Basic parolasıyla korunur (kullanıcı adı serbest); **VPS'te internete açmadan önce mutlaka doldurun**. Boş = koruma kapalı (yerel kullanım) |
 | `gunluk_guncelleme_saat` | Gecelik veri+model güncelleme saati |
 | `veri_baslangic` | Tarihsel verinin başlangıcı |

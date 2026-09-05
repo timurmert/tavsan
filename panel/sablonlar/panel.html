@@ -11,6 +11,7 @@
     --yuzey: #fcfcfb; --kart: #ffffff;
     --metin: #0b0b0b; --ikincil: #52514e; --soluk: #898781; --izgara: #e1e0d9;
     --seri1: #2a78d6; --seri2: #eb6834; --seri3: #1baf7a;
+    --seri4: #eda100; --seri5: #e87ba4;
     --iyi: #0ca30c; --kotu: #d03b3b;
   }
   @media (prefers-color-scheme: dark) {
@@ -18,6 +19,7 @@
       --yuzey: #1a1a19; --kart: #232322;
       --metin: #ffffff; --ikincil: #c3c2b7; --soluk: #8b8a80; --izgara: #34332f;
       --seri1: #3987e5; --seri2: #d95926; --seri3: #199e70;
+      --seri4: #c98500; --seri5: #d55181;
       --iyi: #0ca30c; --kotu: #d03b3b;
     }
   }
@@ -116,6 +118,7 @@
       <div class="buyuk-fiyat" id="guncelFiyat">—</div>
       <div class="degisim" id="gunlukDegisim"></div>
       <div class="kucuk soluk-metin" id="alisSatis"></div>
+      <div class="kucuk" id="pozisyonSatiri" hidden></div>
     </div>
     <div class="canli-kap" id="canliKap" hidden>
       <div class="canli-grafik"><canvas id="grafikCanli" aria-label="Son 24 saatlik canlı gram altın çizgisi"></canvas></div>
@@ -133,6 +136,7 @@
     <div class="kart">
       <p id="kararOzet">Senaryo verisi bekleniyor…</p>
       <p id="kararMevduat"></p>
+      <p id="kararOynaklik" hidden></p>
       <div class="grafik-kap kisa"><canvas id="grafikKarar" aria-label="Aylara göre makas sonrası kârda olma olasılığı"></canvas></div>
       <p class="not" id="kararNot">Eğri, bugün alınan gramın alış-satış makası düşüldükten sonra o ayda kârda olma
       olasılığıdır — 2.000 senaryo yolundan SAYILIR, model iddiası değildir; geçmiş 21 yılın istatistiksel karakterinin
@@ -210,6 +214,41 @@
       Mevduat getirisi basitleştirilmiş bileşik hesaptır; stopaj ve vergi dahil değildir.</p>
     </div>
     <p class="not" id="kiyasNot" hidden>Kıyas için senaryo dosyası bekleniyor.</p>
+  </section>
+
+  <!-- 4b. Sanal Portföy Ligi -->
+  <section id="bolum-lig">
+    <h2>Sanal Portföy Ligi — hangi davranış kazanıyor?</h2>
+    <div class="kart">
+      <h3 class="kucuk ikincil-metin" id="ligBacktestBaslik">Geçmiş yarış (100 = başlangıç)</h3>
+      <div class="grafik-kap"><canvas id="grafikLig" aria-label="Stratejilerin geçmiş portföy değeri yarışı"></canvas></div>
+      <p class="not">Geçmiş yarışta nakit FAİZSİZ varsayılır (tarihsel mevduat verisi anahtarsız kaynakta yok);
+      her işlemde alış-satış makası ödenir. Model Takipçisi, aylık walk-forward sinyalini izler —
+      Düzenli Alıcı'yı geçip geçemediği, modelin pratik değerinin TL cinsinden cevabıdır.</p>
+    </div>
+    <div class="kart">
+      <h3 class="kucuk ikincil-metin" id="ligCanliBaslik">Canlı yarış</h3>
+      <div style="overflow-x:auto">
+        <table id="ligTablo" aria-label="Canlı sanal portföy yarışı">
+          <thead><tr><th>Strateji</th><th>Değer</th><th>Getiri</th><th>Pozisyon</th></tr></thead>
+          <tbody id="ligGovde"></tbody>
+        </table>
+      </div>
+      <p class="not">Herkes kurulum günü 100.000 TL ile başladı; nakit, ayarlardaki mevduat oranıyla faiz işler.
+      Kararlar ay kapanışlarında verilir. Bu tablo sicilin portföy karşılığıdır — aylar geçtikçe anlam kazanır.</p>
+    </div>
+    <p class="not" id="ligNot" hidden>Lig dosyası henüz üretilmedi; ilk gecelik güncellemede oluşur.</p>
+  </section>
+
+  <!-- 4c. Bildirimler -->
+  <section id="bolum-bildirim">
+    <h2>Bildirimler</h2>
+    <div class="kart">
+      <ul id="bildirimListe"></ul>
+      <p class="not" id="bildirimBos" hidden>Henüz bildirim yok; sistem olayları burada birikecek.</p>
+      <p class="not">Gecelik güncellemeler, sağlık uyarıları, yaklaşan faiz kararları, sonuçlanan tahminler
+      ve yedekler burada saatiyle listelenir (en yeni üstte, son 50 kayıt).</p>
+    </div>
   </section>
 
   <!-- 5. İsabet geçmişi -->
@@ -347,6 +386,7 @@ function palet() {
     yuzey: al("--yuzey"), kart: al("--kart"), metin: al("--metin"),
     ikincil: al("--ikincil"), soluk: al("--soluk"), izgara: al("--izgara"),
     seri1: al("--seri1"), seri2: al("--seri2"), seri3: al("--seri3"),
+    seri4: al("--seri4"), seri5: al("--seri5"),
     iyi: al("--iyi"), kotu: al("--kotu")
   };
 }
@@ -743,9 +783,13 @@ async function ozetYenile() {
     kiyasDoldur();
     canliCiz();
     kararGuncelle();
+    pozisyonGuncelle();
+    oynaklikGuncelle();
     takvimGuncelle();
     saglikGuncelle();
-    sicilYukle(); /* beklemeden: sicil ayrı uçtan gelir */
+    sicilYukle();    /* beklemeden: ayrı uçlardan gelirler */
+    bildirimYukle();
+    ligYukle();
   } catch (hata) { /* sessiz: bir sonraki denemede düzelir */ }
 }
 function tarihTr(iso) {
@@ -890,6 +934,134 @@ function kararCiz(olasiliklar) {
   });
 }
 
+/* ---------------- 1c. pozisyon + oynaklık satırları ---------------- */
+function pozisyonGuncelle() {
+  const kutu = byId("pozisyonSatiri");
+  const portfoy = DURUM.ozet && DURUM.ozet.portfoy;
+  kutu.hidden = !portfoy;
+  if (!portfoy) return;
+  let metin = "Pozisyonunuz: " + sayi(portfoy.gram, 2) + " gr ≈ " +
+    sayi(portfoy.toplam_deger, 0) + " TL";
+  if (portfoy.kar_zarar_yuzde !== null && portfoy.kar_zarar_yuzde !== undefined) {
+    metin += " · K/Z " + yuzdeDegisim(portfoy.kar_zarar_yuzde, 1) +
+      " (maliyet " + sayi(portfoy.maliyet_birim, 0) + " TL/gr)";
+  }
+  kutu.textContent = metin + " — satarken alacağınız fiyatla değerlenir";
+}
+const REJIM_ETIKETLERI = { sakin: "🌤 sakin", normal: "⛅ normal", dalgali: "🌊 DALGALI" };
+function oynaklikGuncelle() {
+  const kutu = byId("kararOynaklik");
+  const vol = DURUM.ozet && DURUM.ozet.volatilite;
+  kutu.hidden = !vol;
+  if (!vol) return;
+  let metin = "Önümüzdeki hafta beklenen oynaklık: yıllık " +
+    yuzdeOran(vol.gelecek_hafta_yillik_vol, 0) + " — " +
+    (REJIM_ETIKETLERI[vol.rejim] || vol.rejim) +
+    " (tarihsel yüzdelik " + sayi(vol.tarihsel_yuzdelik, 0) + ")";
+  if (vol.rejim === "dalgali") metin += " · dalgalı dönemde kademeli hareket makul";
+  metin += vol.tabani_geciyor
+    ? " · oynaklık modeli tabanı geçiyor ✓"
+    : " · oynaklık modeli tabanı geçemiyor ⚠";
+  kutu.textContent = metin;
+}
+
+/* ---------------- 4b. sanal portföy ligi ---------------- */
+function ligCiz() {
+  const backtest = DURUM.lig && DURUM.lig.backtest;
+  if (!backtest || !backtest.stratejiler) return;
+  const p = palet();
+  const renkler = [p.seri1, p.seri2, p.seri3, p.seri4, p.seri5];
+  const adlar = Object.keys(backtest.stratejiler);
+  cizVeyaYenile("lig", "grafikLig", {
+    type: "line",
+    data: {
+      labels: (backtest.tarihler || []).map(tarihKisa),
+      datasets: adlar.map((ad, i) => ({
+        label: backtest.stratejiler[ad].etiket,
+        data: backtest.stratejiler[ad].seri,
+        borderColor: renkler[i % renkler.length], borderWidth: 2,
+        pointRadius: 0, tension: 0.1,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { labels: { color: p.ikincil } },
+        tooltip: ipucuAyar(p, {
+          label: (b) => b.dataset.label + ": " + sayi(b.parsed.y, 0),
+        }),
+      },
+      scales: {
+        x: { grid: { display: false }, border: { color: p.izgara },
+             ticks: { color: p.ikincil, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+        y: { grid: { color: p.izgara }, border: { display: false },
+             ticks: { color: p.ikincil } },
+      },
+    },
+  });
+}
+function ligGuncelle() {
+  const lig = DURUM.lig;
+  const yok = !lig || !lig.canli;
+  byId("ligNot").hidden = !yok;
+  if (yok) return;
+  const backtest = lig.backtest || {};
+  if (backtest.baslangic_tarih) {
+    byId("ligBacktestBaslik").textContent =
+      "Geçmiş yarış (" + tarihKisa(backtest.baslangic_tarih) + " → bugün, 100 = başlangıç)";
+  }
+  byId("ligCanliBaslik").textContent =
+    "Canlı yarış (başlangıç: " + tarihNokta(lig.canli.baslangic_tarih) +
+    " · değerleme: " + tarihNokta(lig.canli.degerleme_tarihi) + ")";
+  const govde = byId("ligGovde");
+  govde.textContent = "";
+  const satirlar = Object.values(lig.canli.stratejiler || {})
+    .sort((a, b) => b.deger - a.deger);
+  for (const s of satirlar) {
+    const satir = document.createElement("tr");
+    const pozisyon = s.gram > 0
+      ? sayi(s.gram, 2) + " gr" + (s.nakit > 1 ? " + " + sayi(s.nakit, 0) + " TL" : "")
+      : sayi(s.nakit, 0) + " TL nakit";
+    for (const metin of [s.etiket, sayi(s.deger, 0) + " TL",
+                         yuzdeDegisim(s.getiri_yuzde, 2), pozisyon]) {
+      const hucre = document.createElement("td");
+      hucre.textContent = metin;
+      satir.appendChild(hucre);
+    }
+    govde.appendChild(satir);
+  }
+  ligCiz();
+}
+async function ligYukle() {
+  try {
+    DURUM.lig = await jsonGetir("/api/lig");
+  } catch (hata) { DURUM.lig = null; }
+  ligGuncelle();
+}
+
+/* ---------------- 4c. bildirimler ---------------- */
+const BILDIRIM_SIMGELERI = { zincir: "🔄", saglik: "🩺", takvim: "📅",
+                             sicil: "🎯", agirlik: "⚖️", yedek: "💾", hata: "⚠️" };
+function bildirimGuncelle() {
+  const liste = byId("bildirimListe");
+  liste.textContent = "";
+  const kayitlar = (DURUM.bildirimler || []);
+  byId("bildirimBos").hidden = kayitlar.length > 0;
+  for (const kayit of kayitlar) {
+    const satir = document.createElement("li");
+    satir.textContent = (BILDIRIM_SIMGELERI[kayit.tur] || "•") + " " +
+      zamanKisa(kayit.zaman) + " — " + kayit.mesaj;
+    liste.appendChild(satir);
+  }
+}
+async function bildirimYukle() {
+  try {
+    DURUM.bildirimler = (await jsonGetir("/api/bildirimler")).bildirimler || [];
+  } catch (hata) { DURUM.bildirimler = []; }
+  bildirimGuncelle();
+}
+
 /* ---------------- 2d. model sağlığı ---------------- */
 const PSI_SIMGELERI = { stabil: "🟢 Stabil", izleniyor: "🟡 İzleniyor", alarm: "🔴 ALARM", veri_az: "⏳ veri az" };
 const UYUM_METNI = { uyumlu: "✓ uyumlu", beklenenin_altinda: "✗ BEKLENENİN ALTINDA", veri_az: "⏳ veri az" };
@@ -1003,7 +1175,7 @@ dugmeGrubuKur("aralikDugmeleri", "aralik", (aralik) => { DURUM.aralik = aralik; 
 dugmeGrubuKur("kalibDugmeleri", "kufuk", (ufuk) => { DURUM.kalibUfuk = ufuk; kalibrasyonCiz(); });
 
 const temaSorgusu = window.matchMedia("(prefers-color-scheme: dark)");
-const temaDegisti = () => { senaryoCiz(); isabetCiz(); fiyatCiz(); canliCiz(); kalibrasyonCiz(); kararCiz(); };
+const temaDegisti = () => { senaryoCiz(); isabetCiz(); fiyatCiz(); canliCiz(); kalibrasyonCiz(); kararCiz(); ligCiz(); };
 if (temaSorgusu.addEventListener) temaSorgusu.addEventListener("change", temaDegisti);
 else if (temaSorgusu.addListener) temaSorgusu.addListener(temaDegisti);
 
