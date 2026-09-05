@@ -21,6 +21,8 @@ echo "[4/4] Analiz zinciri calistiriliyor (birkac dakika surebilir)..."
 ./venv/bin/python -m model.egit
 ./venv/bin/python -m model.senaryo
 ./venv/bin/python -m model.kisa_vade
+./venv/bin/python -m model.volatilite
+./venv/bin/python -m model.lig
 ./venv/bin/python -m model.saglik
 
 echo "Tamam. Panel: http://$(hostname -I | awk '{print $1}'):8050"
